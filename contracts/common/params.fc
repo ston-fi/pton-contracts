@@ -1,0 +1,6 @@
+const params::workchain = 0;
+const params::addr_std_type = 2; ;; addr_std$10 anycast:(Maybe Anycast) workchain_id:int8 address:bits256  = MsgAddressInt;
+
+const params::version_major = <%= version[0] %>;
+const params::version_minor = <%= version[1] %>;
+const params::version_development = "<%= version[3] %>";

@@ -1,0 +1,5 @@
+const op::deploy_wallet   = "deploy_wallet query_id:uint64 owner_address:MsgAddress excesses_address:MsgAddress = InternalMsgBody"c & 0x7fffffff; 
+const op::internal_deploy = "internal_deploy query_id:uint64 excesses_address:MsgAddress = InternalMsgBody"c & 0x7fffffff;
+const op::ton_transfer    = "ton_transfer query_id:uint64 ton_amount:Coins refund_address:MsgAddress forward_payload:(Either Cell ^Cell) = InternalMsgBody"c & 0x7fffffff;
+const op::reset_gas       = "reset_gas query_id:uint64 = InternalMsgBody"c & 0x7fffffff;
+const op::ton_refund      = "ton_refund query_id:uint64 = InternalMsgBody"c | 0x80000000;

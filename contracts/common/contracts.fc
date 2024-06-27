@@ -1,0 +1,42 @@
+(cell) wallet_data(slice _minter_address, slice _owner_address) inline {
+    return begin_cell()
+        .store_coins(0) ;; balance
+        .store_slice(_owner_address)
+        .store_slice(_minter_address)
+    .end_cell();
+}
+
+(builder) any::btake_wallet_address(slice _wallet_address, cell _included_address) inline {
+    return begin_message(op::ft::take_wallet_address)
+        .store_slice(_wallet_address)
+        .store_maybe_ref(_included_address);
+}
+
+(builder) wallet::binternal_deploy(slice _excesses_address) inline {
+    return begin_message(op::internal_deploy)
+        .store_slice(_excesses_address);
+}
+
+(cell) any::transfer_notification(
+    int _jetton_amount, 
+    slice _sender_address, 
+    slice _either_forward_payload
+) inline {
+    return begin_message(op::ft::transfer_notification)
+            .store_coins(_jetton_amount) 
+            .store_slice(_sender_address)
+            .store_slice(_either_forward_payload)
+        .end_cell();
+}
+
+(cell) any::ton_transfer(
+    int _ton_amount, 
+    slice _refund_address, 
+    slice _either_forward_payload
+) inline {
+    return begin_message(op::ton_transfer)
+            .store_coins(_ton_amount)
+            .store_slice(_refund_address)
+            .store_slice(_either_forward_payload)
+        .end_cell();
+}

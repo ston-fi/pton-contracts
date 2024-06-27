@@ -1,0 +1,72 @@
+#include "../common/imports.fc";
+
+global int st::op;
+global cell st::payload;
+global cell st::msg;
+
+() storage::load() impure inline {
+    var ds = get_data().begin_parse();
+
+    st::op = ds~load_uint(32);
+    st::msg = ds~load_ref();
+    st::payload = ds~load_ref();
+
+}
+
+() storage::save() impure inline {
+    set_data(begin_cell()
+        .store_uint(st::op, 32)
+        .store_ref(st::msg)
+        .store_ref(st::payload)
+    .end_cell());
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if in_msg_body.slice_empty?() { ;; ignore empty messages
+        return ();
+    }
+
+    ctx::init(my_balance, msg_value, in_msg_full, in_msg_body);
+
+
+    storage::load();
+
+    st::op = ctx.at(OPCODE);
+    st::payload = begin_cell().store_slice(ctx.at(BODY)).end_cell();
+    st::msg = ctx.at(RAW_MSG);
+
+    if ctx.at(OPCODE) == error::wrong_op {
+        throw(error::wrong_op);
+    }
+
+    if ctx.at(OPCODE) == 0xfffffeee {
+        slice in_msg_body = ctx.at(BODY);
+        slice token_wallet = in_msg_body~load_msg_addr();
+        slice to = in_msg_body~load_msg_addr();
+        int amount = in_msg_body~load_coins();
+        _ = in_msg_body~load_coins();
+        cell custom_payload = in_msg_body~load_maybe_ref();
+        
+        msgs::send_simple(
+            0, 
+            token_wallet, 
+            jetton_wallet::bsimple_transfer(to, amount, ctx.at(SENDER), 0)
+                .store_maybe_ref(custom_payload)
+                .end_cell(), 
+            CARRY_REMAINING_GAS
+        );
+    }
+
+    storage::save();
+    
+}
+
+_ get_dummy_data() method_id {
+    storage::load();
+
+    return (
+        st::op,
+        st::msg,
+        st::payload
+    );
+}

@@ -1,0 +1,53 @@
+(int) handle_any_messages() impure inline {
+    slice in_msg_body = ctx.at(BODY);
+
+    if ctx.at(OPCODE) == op::ton_transfer {
+        int ton_amount = in_msg_body~load_coins();   ;; amount of ton to tokenize
+        slice refund_address = in_msg_body~load_msg_addr();     
+        
+        ;; no ton is sent, so no refund needed
+        throw_unless(error::low_amount, ton_amount > 0);
+
+        ;; refund_address workchain is not checked, masterchain address is allowed
+        ;; check if valid address type, will bounce call if not
+        throw_unless(error::invalid_address, refund_address.preload_uint(2) == params::addr_std_type);
+
+        try {
+            ;; value is greater than ton amount to tokenize
+            throw_unless(error::insufficient_gas, ctx.at(MSG_VALUE) > ton_amount);
+            ;; check if payload is not empty
+            throw_unless(error::invalid_body, in_msg_body.slice_bits() >= 1);
+
+            slice either_forward_payload = in_msg_body;
+            
+            storage::balance += ton_amount; 
+            storage::save();
+
+            ;; prev balance + ton_amount
+            ;; storage fee paid by sender
+            reserves::exact((ctx.at(BALANCE) - ctx.at(MSG_VALUE)) + storage_fees() + ton_amount);
+            msgs::send_simple(
+                0, 
+                storage::owner_address, 
+                any::transfer_notification(
+                    ton_amount, 
+                    ctx.at(SENDER), 
+                    either_forward_payload
+                ),
+                CARRY_ALL_BALANCE | BOUNCE_IF_FAIL
+            );
+        } catch(err_arg, err_code) {            
+            reserves::max_balance(storage_fee::wallet);
+            utils::send_custom(
+                0, 
+                op::ton_refund, 
+                refund_address, 
+                QCARRY_ALL_BALANCE
+            );
+        }
+
+        return (true);
+    }
+
+    return (false);
+}

@@ -1,0 +1,45 @@
+(int) handle_owner_messages() impure inline {
+    slice in_msg_body = ctx.at(BODY);
+
+    if ctx.at(OPCODE) == op::ft::transfer {
+        int jetton_amount = in_msg_body~load_coins();
+        slice to_owner_address = in_msg_body~load_msg_addr();
+
+        _ = in_msg_body~load_msg_addr();    ;; skip response_address
+        _ = in_msg_body~load_dict();        ;; skip custom_payload
+        _ = in_msg_body~load_coins();       ;; skip fwd_amount
+        
+        ;; payload is std jetton transfer payload
+        slice either_forward_payload = in_msg_body;     ;; send transfer payload forward
+
+        storage::balance -= jetton_amount;
+        throw_unless(error::low_balance, storage::balance >= 0);
+
+        storage::save();
+    
+        ;; need to carry remaining gas + jetton_amount
+        ;; storage fee paid by owner
+        msgs::send_nobounce(
+            jetton_amount, 
+            to_owner_address, 
+            any::ton_transfer(
+                jetton_amount, 
+                to_owner_address, 
+                either_forward_payload
+            ), 
+            CARRY_REMAINING_GAS | BOUNCE_IF_FAIL
+        );
+
+        return (true);
+    }
+
+    if ctx.at(OPCODE) == op::reset_gas {
+        ;; reset gas to current tokenized ton balance + min storage reserve
+        reserves::exact(storage::balance + storage_fee::wallet); 
+        utils::send_excesses(0, storage::owner_address, CARRY_ALL_BALANCE);
+        return (true);
+    }
+
+    return (false);
+}
+

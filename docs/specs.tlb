@@ -1,0 +1,28 @@
+nothing$0 {X:Type} = Maybe X;
+just$1 {X:Type} value:X = Maybe X;
+left$0 {X:Type} {Y:Type} value:X = Either X Y;
+right$1 {X:Type} {Y:Type} value:Y = Either X Y;
+var_uint$_ {n:#} len:(#< n) value:(uint (len * 8)) = VarUInteger n;
+addr_none$00 = MsgAddressExt;
+addr_extern$01 len:(## 9) external_address:(bits len) = MsgAddressExt;
+anycast_info$_ depth:(#<= 30) { depth >= 1 } rewrite_pfx:(bits depth) = Anycast;
+addr_std$10 anycast:(Maybe Anycast) workchain_id:int8 address:bits256  = MsgAddressInt;
+addr_var$11 anycast:(Maybe Anycast) addr_len:(## 9) workchain_id:int32 address:(bits addr_len) = MsgAddressInt;
+_ _:MsgAddressInt = MsgAddress;
+_ _:MsgAddressExt = MsgAddress;
+
+
+;; storage layouts
+
+;; minter
+storage#_ id:uint32 wallet_code:^Cell content:^Cell = Storage;
+
+;; wallet 
+storage#_ balance:Coins owner_address:MsgAddress minter_address:MsgAddress = Storage;
+
+;; messages
+deploy_wallet query_id:uint64 owner_address:MsgAddress excesses_address:MsgAddress = InternalMsgBody;
+internal_deploy query_id:uint64 excesses_address:MsgAddress = InternalMsgBody;
+ton_transfer query_id:uint64 ton_amount:Coins refund_address:MsgAddress forward_payload:(Either Cell ^Cell) = InternalMsgBody;
+reset_gas query_id:uint64 = InternalMsgBody;
+ton_refund query_id:uint64 = InternalMsgBody;

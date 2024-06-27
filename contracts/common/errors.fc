@@ -1,0 +1,9 @@
+const error::insufficient_gas = 83;
+const error::invalid_address = 84;
+const error::low_amount = 87;
+const error::low_balance = 88;
+const error::invalid_amount = 89;
+const error::wrong_workchain = 85;
+const error::invalid_body = 90;
+
+const error::wrong_op = 0xFFFF;

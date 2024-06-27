@@ -1,0 +1,5 @@
+#include "storage.fc";
+#include "get.fc";
+#include "msgs/minter.fc";
+#include "msgs/owner.fc";
+#include "msgs/any.fc";

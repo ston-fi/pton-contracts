@@ -1,0 +1,65 @@
+(int) handle_any_messages() impure inline {
+    slice in_msg_body = ctx.at(BODY);
+
+    if ctx.at(OPCODE) == op::deploy_wallet {
+        ;; manually create pTon wallet for some address
+
+        ;; -> Minter -> Wallet -> 
+        throw_unless(error::insufficient_gas, ctx.at(MSG_VALUE) > (ctx.at(FWD_FEE) * 3) 
+            + storage_fee::minter + gas::minter::deploy_wallet 
+            + storage_fee::wallet + gas::wallet::internal_deploy);
+        
+        slice owner_address = in_msg_body~load_msg_addr();
+        slice excesses_address = in_msg_body~load_msg_addr();
+        in_msg_body.end_parse();
+
+        throw_unless(error::wrong_workchain, owner_address.address::check_workchain(params::workchain)
+            & excesses_address.address::check_workchain(params::workchain));
+
+        var wallet = contracts::from_sources(
+            wallet_data(my_address(), owner_address),
+            storage::wallet_code
+        );
+
+        reserves::max_balance(storage_fee::minter);
+        msgs::send_bwith_stateinit(
+            0,
+            wallet~address(params::workchain),
+            wallet~state_init(),
+            wallet::binternal_deploy(excesses_address),
+            CARRY_ALL_BALANCE
+        );
+
+        return (true);
+    }
+
+    if ctx.at(OPCODE) == op::ft::provide_wallet_address {   
+        ;; std `provide_wallet_address`
+        
+        slice owner_address = in_msg_body~load_msg_addr();
+        int include_address? = in_msg_body~load_bool();
+        in_msg_body.end_parse();
+
+        cell included_address = include_address? ? begin_cell().store_slice(owner_address).end_cell() : null();
+        
+        var wallet = contracts::from_sources(
+            wallet_data(my_address(), owner_address),
+            storage::wallet_code
+        );
+
+        slice wallet_address = owner_address.address::check_workchain(params::workchain) 
+            ? wallet~address(params::workchain) : addr_none();
+
+        reserves::max_balance(storage_fee::minter);
+        msgs::send_bsimple(
+            0, 
+            ctx.at(SENDER), 
+            any::btake_wallet_address(wallet_address, included_address), 
+            CARRY_ALL_BALANCE | BOUNCE_IF_FAIL
+        );
+        
+        return (true);
+    }
+
+    return (false);
+}

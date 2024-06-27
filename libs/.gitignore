@@ -1,0 +1,15 @@
+node_modules
+temp
+.vscode
+
+build/*compiled.json
+build/*config.json
+build/*.md
+
+.env
+!.env.example
+local/
+build/
+
+# Yarn
+.yarn/

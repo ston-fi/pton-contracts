@@ -1,0 +1,14 @@
+(int) handle_minter_messages() impure inline {
+    slice in_msg_body = ctx.at(BODY);
+
+    if ctx.at(OPCODE) == op::internal_deploy {
+        ;; triggered when the wallet is deployed to send excesses to the caller
+        slice excesses_address = in_msg_body~load_msg_addr(); 
+
+        reserves::max_balance(storage_fee::wallet); 
+        utils::send_excesses(0, excesses_address, CARRY_ALL_BALANCE);
+        return (true);
+    }
+
+    return (false);
+}

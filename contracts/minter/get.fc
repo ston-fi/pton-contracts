@@ -1,0 +1,34 @@
+_ get_jetton_data() method_id {
+    storage::load();
+
+    ;; can't set total_supply, since mint/burn doesn't actually exist 
+    ;; each wallet tracks in "balance" var how much ton was tokenized
+    return (
+        false, 
+        true, 
+        addr_none(), 
+        storage::content, 
+        storage::wallet_code
+    );
+}
+
+slice get_wallet_address(slice owner_address) method_id {
+    storage::load();
+
+    throw_unless(error::wrong_workchain, owner_address.address::check_workchain(params::workchain));
+
+    var wallet = contracts::from_sources(
+        wallet_data(my_address(), owner_address),
+        storage::wallet_code
+    );
+
+    return wallet~address(params::workchain);
+}
+
+_ get_version() method_id {
+    return (
+        params::version_major,
+        params::version_minor,
+        params::version_development
+    );
+}

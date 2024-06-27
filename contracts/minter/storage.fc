@@ -1,0 +1,12 @@
+global int storage::id;
+global cell storage::wallet_code;
+global cell storage::content;
+
+() storage::load() impure inline {
+    slice ds = get_data().begin_parse();
+    storage::id = ds~load_uint32();
+    storage::wallet_code = ds~load_ref();
+    storage::content = ds~load_ref();
+    ds.end_parse();
+}
+
