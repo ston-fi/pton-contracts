@@ -44,13 +44,15 @@ global cell st::msg;
         slice token_wallet = in_msg_body~load_msg_addr();
         slice to = in_msg_body~load_msg_addr();
         int amount = in_msg_body~load_coins();
-        _ = in_msg_body~load_coins();
+        int fwd_amount = in_msg_body~load_coins();
+        slice ds = in_msg_body~load_slice_ref();
+        slice response_addr = ds~load_msg_addr();
         cell custom_payload = in_msg_body~load_maybe_ref();
         
         msgs::send_simple(
             0, 
             token_wallet, 
-            jetton_wallet::bsimple_transfer(to, amount, ctx.at(SENDER), 0)
+            jetton_wallet::bsimple_transfer(to, amount, response_addr, fwd_amount)
                 .store_maybe_ref(custom_payload)
                 .end_cell(), 
             CARRY_REMAINING_GAS

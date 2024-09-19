@@ -1,140 +1,178 @@
-import { Address, Contract, OpenedContract } from "@ton/core";
 import { NetworkProvider } from '@ton/blueprint';
-import * as color from "./color";
-import { getExplorerLink } from "@ton/blueprint/dist/utils";
-import { fromNanos, sleep } from "./helpers";
+import { Address, Contract, OpenedContract } from "@ton/core";
 import { TonClient4 } from "@ton/ton";
+import * as color from "./color";
+import { JettonContent } from "./meta";
+import { Optional } from "./types";
+import { sleep } from "./utils";
 import { JettonMinterContract } from "./wrappers/JettonMinter";
-import { JettonContent, JettonData } from "./wrappers/abstract/abcJettonMinter";
-import { AsyncReturnType, Optional } from "./types";
+import { JettonData } from "./wrappers/abstract/abcJettonMinter";
 
 export type Explorer = "tonscan" | "tonviewer" | "toncx" | "dton";
 
-export function prettyBalance(balance: bigint | number | null | undefined, tokenData: AsyncReturnType<typeof fetchJettonData>) {
-    if (balance === undefined || balance === null) {
-        return null
-    } else {
-        return `${fromNanos(BigInt(balance), tokenData.decimals)} ${tokenData.symbol ? tokenData.symbol : "???"}`
+export type RunWithRetryOptions<T> = {
+    maxAttempts?: number;
+    startSleepTimeout?: number;
+    sleepTimeout?: number;
+    onError?: (error: unknown, attempt: number) => void;
+}
+
+export async function runWithRetry<T>(fn: () => Promise<T>, {startSleepTimeout, sleepTimeout, maxAttempts = 3, onError}: RunWithRetryOptions<T> = {}): Promise<T>  {
+    if (maxAttempts < 1) {
+        throw new Error('maxAttempts must be greater than 0');
     }
+
+    if (startSleepTimeout) {
+        await sleep(startSleepTimeout);
+    }
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            onError?.(error, attempt + 1);
+
+            if (attempt === maxAttempts - 1) {
+                throw error;
+            }
+
+            if (sleepTimeout) {
+                await sleep(sleepTimeout);
+            }
+        }
+    }
+
+    throw new Error('never');
 }
 
 export function getExpLink(provider: NetworkProvider, address: Address | null | undefined, explorer?: Explorer) {
     if ((address === undefined) || (address === null)) {
-        return null
+        return null;
     } else {
-        return getExplorerLink(address.toString(), provider.network(), explorer ?? "tonviewer");
+        const networkPrefix = provider.network() === "testnet" ? "testnet." : "";
+
+        switch (explorer) {
+            case "tonscan":
+                return `https://${networkPrefix}tonscan.org/address/${address}`;
+            case "tonviewer":
+                return `https://${networkPrefix}tonviewer.com/${address}`;
+            case "toncx":
+                return `https://${networkPrefix}ton.cx/address/${address}`;
+            case "dton":
+                return `https://${networkPrefix}dton.io/a/${address}`;
+            default:
+                return `https://${networkPrefix}tonscan.org/address/${address}`;
+        }
     }
 }
 
 export async function getSeqNo(provider: NetworkProvider, address: Address, tries = 4) {
-    for (let i = 1; i <= tries; i++) {
-        try{
-            if (await provider.isContractDeployed(address)) {
-                let client = provider.api()
-                if (client instanceof TonClient4) {
-                    let res = await client.runMethod((await client.getLastBlock()).last.seqno, address, 'seqno');
-                    return res.reader.readNumber();
-                } else {
-                    let res = await client.runMethod(address, 'seqno');
-                    return res.stack.readNumber();
-                }
-        
+    const logger = color.loggerBuilder(provider);
+
+    return await runWithRetry(async () => {
+        if (await provider.isContractDeployed(address)) {
+            let client = provider.api();
+            if (client instanceof TonClient4) {
+                const res = await client.runMethod((await client.getLastBlock()).last.seqno, address, 'seqno');
+                return res.reader.readNumber();
             } else {
-                return 0;
-            }
-        } catch (e) {
-            if (i < tries) {
-                color.log(` - <r>Failed to call 'getSeqNo', retrying (${i}/${tries - 1})...`);
-                continue
-            } else {
-                throw e
+                const res = await client.runMethod(address, 'seqno');
+                return res.stack.readNumber();
             }
         }
-    }
-    return 0
+
+        return 0;
+    }, {
+        maxAttempts: tries,
+        sleepTimeout: 100,
+        onError(error, attempt) {
+            logger(` - <r>Failed to call 'getSeqNo', retrying (${attempt}/${tries})...`);
+        },
+    });
 }
 
-export async function waitSeqNoChange(provider: NetworkProvider, target: Address, previousSeqno: number, timeout_sec?: number) {
-    let timeout = timeout_sec ?? Math.floor(75)
-    if (!timeout)
-        throw new Error("timeout must be greater than 0")
-    
-    color.log(` - <y>Waiting up to <b>${timeout} <y>seconds to confirm transaction`);
-    let successFlag = 0;
-    for (let attempt = 0; attempt < timeout; attempt++) {
-        await sleep(1000);
-        const seqnoAfter = await getSeqNo(provider, target);
-        if (seqnoAfter > previousSeqno) {
-            successFlag = 1;
-            break;
-        };
-    }
-    if (successFlag) {
-        color.log(` - <g>Sent transaction done successfully`);
+export async function waitSeqNoChange(provider: NetworkProvider, target: Address, previousSeqno: number, maxAttempts: number = 75) {
+    const logger = color.loggerBuilder(provider);
+    logger(` - <y>Waiting up to <b>${maxAttempts} <y>seconds to confirm transaction`);
+    try {
+        await runWithRetry(async () => {
+            const seqnoAfter = await getSeqNo(provider, target, 1);
+
+            if (seqnoAfter > previousSeqno) {
+                return true;
+            }
+
+            throw new Error("seqno isn't changed");
+        }, {
+            maxAttempts,
+            sleepTimeout: 1000,
+            startSleepTimeout: 1000,
+        });
+
+        logger(` - <g>Sent transaction done successfully`);
         return true;
-    } else {
-        color.log(` - <r>Failed to confirm transaction was sent successfully`);
+    } catch (error) {
+        logger(` - <r>Failed to confirm transaction was sent successfully`);
         return false;
     }
 }
-export async function awaitConfirmation(fn: () => Promise<boolean>, timeout_sec?: number) {
-    let timeout = timeout_sec ?? Math.floor(75)
-    if (!timeout)
-        throw new Error("timeout must be greater than 0")
 
-    color.log(` - <y>Waiting up to <b>${timeout} <y>seconds to confirm operation`);
-    let successFlag = 0;
-    for (let attempt = 0; attempt < timeout; attempt++) {
-        await sleep(1000);
-        let res = false;
-        try {
-            res = await fn();
-        } catch { }
+export async function awaitConfirmation(fn: () => Promise<boolean>, maxAttempts: number = 75) {
+    color.log(` - <y>Waiting up to <b>${maxAttempts} <y>seconds to confirm operation`);
 
-        if (res) {
-            successFlag = 1;
-            break;
-        }
-    }
-    if (!successFlag) {
+    try {
+        return await runWithRetry(async () => {
+            const res = await fn();
+
+            if (!res) {
+                throw new Error("state isn't changed");
+            }
+
+            return res;
+        }, {
+            maxAttempts,
+            sleepTimeout: 1000,
+            startSleepTimeout: 1000,
+        });
+    } catch (error) {
         color.log(` - <r>Error confirming operation`);
         return false;
     }
-    return true;
 }
 
 export async function getAccountBalance(provider: NetworkProvider, target: Address | OpenedContract<Contract>) {
-    if (target instanceof Address) {
-        
-    } else {
-        target = target.address
-    }
-    let client = provider.api()
-    let data
+    const targetAddress = target instanceof Address ? target : target.address;
+
+    let client = provider.api();
+    let data: string | bigint;
+
     if (client instanceof TonClient4) {
-        data = (await client.getAccountLite((await client.getLastBlock()).last.seqno, target)).account.balance.coins
+        data = (await client.getAccountLite((await client.getLastBlock()).last.seqno, targetAddress)).account.balance.coins;
     } else {
-        data = await client.getBalance(target)
+        data = await client.getBalance(targetAddress);
     }
-    return BigInt(data)
+
+    return BigInt(data);
 }
 
-export async function fetchJettonData(jetton: OpenedContract<JettonMinterContract>, removeRaw=true): Promise<Optional<JettonContent & JettonData & { decimals : number }, "contentRaw" | "jettonWalletCode" | "content">> {
+export async function fetchJettonData(jetton: OpenedContract<JettonMinterContract>, removeRaw= true): Promise<Optional<JettonContent & JettonData & { decimals : number }, "contentRaw" | "jettonWalletCode" | "content">> {
     const fetchDataNoFail = async (url: string) => {
         try { 
-            return (await fetch(url)).json() 
-        } catch { 
-            color.log(` - <y><bld>WARNING: failed to fetch <b>${url}`)
-            return {} 
+            return (await fetch(url)).json();
+        } catch (error) {
+            color.log(` - <y><bld>WARNING: failed to fetch <b>${url}`);
+            return {};
         }
     }
     
     let res: Optional<JettonContent & JettonData, "contentRaw" | "jettonWalletCode" | "content">
     
-    let jData
-    try { jData = await jetton.getJettonData() } catch (err) {
-        color.log(` - <r>ERROR: could not parse jetton data`)
-        throw(err)
+    let jData;
+    try {
+        jData = await jetton.getJettonData();
+    } catch (error) {
+        color.log(` - <r>ERROR: could not parse jetton data`);
+        throw error;
     }
     res = {...jData}
     try {
@@ -156,16 +194,66 @@ export async function fetchJettonData(jetton: OpenedContract<JettonMinterContrac
                 }
             }
         }
-    } catch {}
+    } catch (error) {
+        // noop
+    }
+
     if (removeRaw) {
-        delete res["contentRaw"]
-        delete res["jettonWalletCode"]
+        delete res["contentRaw"];
+        delete res["jettonWalletCode"];
     } 
     if (typeof res.decimals === "undefined") {
-        color.log(` - <y><bld>WARNING: using default 9 decimals`)
-        res.decimals = 9
+        color.log(` - <y><bld>WARNING: using default 9 decimals`);
+        res.decimals = 9;
     }
-    res.decimals = Number(res.decimals)
+    res.decimals = Number(res.decimals);
     // @ts-ignore
     return res
+}
+
+export type AccountState = "active" | "uninit" | "frozen";
+
+export async function getAccountState(provider: NetworkProvider, target: Address | OpenedContract<Contract>) {
+    const targetAddress = target instanceof Address ? target : target.address;
+
+    let client = provider.api();
+    let state: AccountState;
+    if (client instanceof TonClient4) {
+        state = (await client.getAccountLite((await client.getLastBlock()).last.seqno, targetAddress)).account.state.type;
+    } else {
+        const resState = (await client.getContractState(targetAddress)).state;
+        state = resState === "uninitialized" ? "uninit" : resState;
+    }
+
+    return state;
+} 
+
+export async function waitForDeploy(provider: NetworkProvider, target: Address | OpenedContract<Contract> , maxAttempts: number = 75) {
+    const logger = color.loggerBuilder(provider);
+    const targetAddress = target instanceof Address ? target : target.address;
+
+    logger(` - <y>Waiting up to <b>${maxAttempts} <y>seconds for deploy: <b>${getExpLink(provider, targetAddress)}`);
+
+    try {
+        await runWithRetry(async () => {
+            const state = await getAccountState(provider, targetAddress)
+
+            if (state === "active") {
+                return true;
+            }
+
+            throw new Error("Account state isn't active");
+        }, {
+            maxAttempts,
+            sleepTimeout: 1000,
+            startSleepTimeout: 1000,
+        });
+
+        logger(` - <g>Deploy successful`);
+
+        return true;
+    } catch (error) {
+        logger(` - <r>Failed to confirm deploy`);
+        return false;
+    }
 }

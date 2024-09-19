@@ -1,6 +1,6 @@
 import { compile } from '@ton/blueprint';
 import { Address, Cell, ExternalAddress, Slice, beginCell, toNano } from '@ton/core';
-import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
+import { Blockchain, SandboxContract, SendMessageResult, TreasuryContract } from '@ton/sandbox';
 import '@ton/test-utils';
 import 'dotenv/config';
 import { createMDGraphLocal, preprocBuildContractsLocal } from '../helpers/helpers';
@@ -38,7 +38,9 @@ type SendParams = {
 }
 type SendDummyParams = {
     amount: bigint,
+    fwdAmount?: bigint,
     toAddress: Address,
+    responseAddress?: Address,
     debugGraph?: string,
     payload?: Cell,
     wallet: SBCtrWallet,
@@ -67,7 +69,7 @@ const defaultPayload = beginCell()
 describe('System', () => {
     let deployPTonWallet: (params: WalletParams) => Promise<SBCtrWallet>,
         deployDummy: (params: DummyParams) => Promise<SBCtrDummy>,
-        sendDummy: (params: SendDummyParams) => Promise<void>,
+        sendDummy: (params: SendDummyParams) => Promise<SendMessageResult>,
         sendTon: (params: SendParams) => Promise<void>
 
     let code: { minter: Cell; wallet: Cell; dummy: Cell; },
@@ -203,7 +205,9 @@ describe('System', () => {
                 ptonWalletAddress: params.wallet.address,
                 to: params.toAddress,
                 amount: params.amount,
-                payload: params.payload
+                payload: params.payload,
+                fwdAmount: params.fwdAmount,
+                responseAddress: params.responseAddress
             }, params.txValue ?? toNano(1))
             if (params.debugGraph) {
                 createMDGraphLocal({
@@ -221,6 +225,7 @@ describe('System', () => {
                 expectNotBounced(msgResult.events)
                 expect(data.balance).toEqual(oldData.balance - params.amount)
             }
+            return msgResult
         };
     });
 
@@ -255,6 +260,7 @@ describe('System', () => {
 
     });
 
+
     describe('Minter', () => {
         it('should deploy new proxy wallet', async () => {
             let wallet = await deployPTonWallet({
@@ -276,6 +282,153 @@ describe('System', () => {
                 owner: dummy.address,
                 label: "Dummy"
             })
+        })
+
+        describe('Excesses logic', () => {
+            it('should handle different response address', async () => {
+                await sendTon({
+                    sender: admin,
+                    tonAmount: toNano(100),
+                    gas: toNano(1),
+                    wallet: wallet,
+                })
+    
+                let msgResult = await sendDummy({
+                    dummy: dummy,
+                    debugGraph: "from_owner_with_response",
+                    amount: toNano(50),
+                    toAddress: alice.address,
+                    wallet: wallet,
+                    responseAddress: admin.address
+                })
+
+                expect(msgResult.transactions).toHaveTransaction({
+                    from: wallet.address,
+                    to: admin.address,
+                    op: stdFtOpCodes.excesses
+                });
+                expect(msgResult.transactions).toHaveTransaction({
+                    from: wallet.address,
+                    to: alice.address,
+                    value: toNano(50)
+                });
+            });
+
+            it('should handle fwd gas', async () => {
+                await sendTon({
+                    sender: admin,
+                    tonAmount: toNano(100),
+                    gas: toNano(1),
+                    wallet: wallet,
+                })
+
+                await wallet.sendEmpty(admin.getSender(), toNano(1000))
+    
+                let msgResult = await sendDummy({
+                    dummy: dummy,
+                    debugGraph: "from_owner_with_gas",
+                    amount: toNano(50),
+                    toAddress: alice.address,
+                    wallet: wallet,
+                    responseAddress: admin.address,
+                    fwdAmount: toNano("0.1")
+                })
+
+                expect(msgResult.transactions).toHaveTransaction({
+                    from: wallet.address,
+                    to: admin.address,
+                    op: stdFtOpCodes.excesses
+                });
+                expect(msgResult.transactions).toHaveTransaction({
+                    from: wallet.address,
+                    to: alice.address,
+                    value: toNano("50.1")
+                });
+            });
+
+            it('should handle bounce if not enough value for fwd gas', async () => {
+                await sendTon({
+                    sender: admin,
+                    tonAmount: toNano(100),
+                    gas: toNano(1),
+                    wallet: wallet,
+                })
+    
+                let msgResult = await sendDummy({
+                    dummy: dummy,
+                    debugGraph: "from_owner_bounce_with_gas",
+                    amount: toNano(50),
+                    toAddress: alice.address,
+                    wallet: wallet,
+                    responseAddress: admin.address,
+                    fwdAmount: toNano("10"),
+                    expectBounce: true
+                })
+
+            });
+
+            it('should handle receiver response address ', async () => {
+                await sendTon({
+                    sender: admin,
+                    tonAmount: toNano(100),
+                    gas: toNano(1),
+                    wallet: wallet,
+                })
+    
+                let msgResult = await sendDummy({
+                    dummy: dummy,
+                    debugGraph: "from_owner_with_response_receiver",
+                    amount: toNano(50),
+                    toAddress: alice.address,
+                    wallet: wallet,
+                    responseAddress: alice.address
+                })
+
+                expect(msgResult.transactions).not.toHaveTransaction({
+                    from: wallet.address,
+                    to: alice.address,
+                    op: stdFtOpCodes.excesses
+                });
+            });
+
+            it('should handle owner transfer to pton wallet with fwd gas', async () => {
+                const dummy2 = await deployDummy({
+                    index: 1
+                })
+                const wallet2 = await deployPTonWallet({
+                    owner: dummy2.address,
+                    label: "Dummy1"
+                })
+    
+                await sendTon({
+                    sender: admin,
+                    tonAmount: toNano(100),
+                    gas: toNano(1),
+                    wallet: wallet,
+                })
+    
+                let msgResult = await sendDummy({
+                    dummy: dummy,
+                    debugGraph: "to_pton_wallet_fwd_gas",
+                    amount: toNano(50),
+                    toAddress: wallet2.address,
+                    wallet: wallet,
+                    fwdAmount: toNano("0.5"),
+                    txValue: toNano("1"),
+                    responseAddress: admin.address
+                })
+
+                expect(msgResult.transactions).toHaveTransaction({
+                    from: wallet.address,
+                    to: admin.address,
+                    op: stdFtOpCodes.excesses
+                });
+                expect(msgResult.transactions).toHaveTransaction({
+                    from: wallet.address,
+                    to: wallet2.address,
+                    value: toNano("50.5")
+                });
+            });
         })
 
         it('should handle user transfer', async () => {

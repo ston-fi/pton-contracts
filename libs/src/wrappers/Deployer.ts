@@ -1,6 +1,6 @@
 import { Cell, beginCell } from "@ton/core";
 import { CommonContractBase } from "./abstract/abcCommon";
-import { codeFromString } from "../helpers";
+import { codeFromString } from "../cell";
 
 export type DeployerConfig = {
     publib: Cell;

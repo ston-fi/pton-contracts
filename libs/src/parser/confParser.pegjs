@@ -35,7 +35,7 @@ number
 word
 	= chars:([a-zA-Z0-9._:]+) { return chars.join(''); }
 literal
-	= "\"" chars:([a-zA-Z0-9._:^\=\(\) ]+) "\"" { return chars.join(''); }
+	= "\"" chars:([a-zA-Z0-9._:^\=\(\)\[\] ]+) "\"" { return chars.join(''); }
 prefix
 	= prefix:[a-zA-Z0-9_$]+ "::" { return prefix.join(""); }
 _

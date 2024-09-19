@@ -1,11 +1,10 @@
 import {
     Address,
     beginCell,
-    Cell,
-    contractAddress,
+    Cell
 } from '@ton/core';
 
-import { beginMessage, codeFromString, emptyCell } from "../helpers";
+import { codeFromString } from "../cell";
 import { JettonWalletContractBase } from './abstract/abcJettonWallet';
 
 export type JettonWalletConfig = {

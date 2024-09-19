@@ -2,13 +2,12 @@ import {
     Address,
     beginCell,
     Cell,
-    contractAddress,
     ContractProvider,
     Sender,
-    SendMode,
+    SendMode
 } from '@ton/core';
 
-import { beginMessage, codeFromString, emptyCell } from "../helpers";
+import { beginMessage, codeFromString } from "../cell";
 import { JettonMinterContractBase } from './abstract/abcJettonMinter';
 
 export type JettonMinterConfig = {

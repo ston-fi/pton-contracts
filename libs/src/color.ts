@@ -1,9 +1,11 @@
+import {type NetworkProvider} from "@ton/blueprint";
+
 /* Examples of colored strings:
     "<r>Red <g>green"
     "<bld><r>Red and bold <g>green and bold"
     "<bld><r>Red and bold <clr><g>green"
 */
-const styles: { [id: string]: string } = {
+const styles: Record<string, string> = {
     clr     : '\x1b[0m', // clear
     clear   : '\x1b[0m',
 
@@ -88,50 +90,71 @@ const styles: { [id: string]: string } = {
 }
 
 // returns array of strings without color tags
-export function decolorText(...text: Array<any>): string[] {
-    let replacer: RegExp
-    let res: string[] = []
-    let txt: string
-    for (let i = 0; i < text.length; i++) {
-        txt = text[i].toString()
-        for (let k in styles) {
-            replacer = new RegExp(`<${k}>`, "g")
-            txt = txt.replace(replacer, "")  
-        }
-        res.push(txt)
-    }
-    return res 
+export function decolorText(...text: any[]): string[] {
+    return text.map((str) => {
+        const colorRegExp = new RegExp('<(' + Object.keys(styles).join('|') + ')>', 'g');
+        return String(str).replace(colorRegExp, '');
+    });
 }
 
 // returns array of strings with color keys as in styles
-export function colorText(...text: Array<any>): string[] {
-    let replacer: RegExp
-    let res: string[] = []
-    let txt: string
-    for (let i = 0; i < text.length; i++) {
-        txt = text[i].toString()
-        for (let k in styles) {
-            replacer = new RegExp(`<${k}>`, "g")
-            txt = txt.replace(replacer, styles[k])  
-        }  
-        txt = txt + styles["clr"]
-        res.push(txt)
-    }
-    return res 
+export function colorText(...text: any[]): string[] {
+    return text.map((str) => {
+        const colorRegExp = new RegExp('<(' + Object.keys(styles).join('|') + ')>', 'g');
+        return String(str).replace(colorRegExp, (_, name) => styles[name] || '') + styles.clr;
+    });
 }
 
-// prints color strings to console, returns decolored array of strings
-export function log(...text: Array<any>): string[] {
-    console.log(...colorText(...text))
+/**
+ * prints color strings to console, returns plain text array of strings
+ * @deprecated use `loggerBuilder` instead
+ */
+export function log(...text: any[]): string[] {
+    if (process.env.STON_CONTRACTS_LOGGER_DISABLED !== 'true') {
+        console.log(...colorText(...text))
+    }
+
     return decolorText(...text)
 }
 
 export function expr(expression: any, tClr = "<g>", fClr = "<r>") {
-    if (expression) {
-        return tClr
-    } else {
-        return fClr
-    }
+    return Boolean(expression) ? tClr : fClr;
 }
 
+/**
+ * @example ```ts
+ * async function run(provider: NetworkProvider) {
+ *     const logger = loggerBuilder(provider);
+ *     // ...some logic here
+ *     logger(` - <y>Deploy minter <b><bld>${noLib ? "WITHOUT" : "WITH"} <clr><y>libs?`);
+ *     logger(`\t<y>uri type: <bld>${color.expr(!config.staticUri)}${config.staticUri ? "STATIC" : "DYNAMIC"}`);
+ * }
+ * ```
+ */
+export function loggerBuilder(provider: Pick<NetworkProvider, 'ui'>) {
+    return function logger(...text: Array<any>) {
+        for (const line of text) {
+            if (typeof line === 'string') {
+                if (process.env.STON_CONTRACTS_LOGGER_DISABLED === 'true') {
+                    provider.ui().write(decolorText(line)[0]);
+                } else {
+                    provider.ui().write(colorText(line)[0]);
+                }
+            } else {
+                if (process.env.STON_CONTRACTS_LOGGER_DISABLED === 'true') {
+                    provider.ui().write(JSON.stringify(line, null, 4));
+                } else {
+                    console.log(line);
+                }
+            }
+        }
 
+        return text.map((line) => {
+            if (typeof line === 'string') {
+                return decolorText(line)[0];
+            }
+
+            return line;
+        });
+    }
+}

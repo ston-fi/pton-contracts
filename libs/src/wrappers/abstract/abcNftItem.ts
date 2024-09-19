@@ -1,16 +1,11 @@
 import {
     Address,
-    beginCell,
     Cell,
-    Contract,
-    contractAddress,
     ContractProvider,
     Sender,
-    SendMode,
-    Dictionary,
-    ShardAccount
+    SendMode
 } from '@ton/core';
-import { emptyCell, beginMessage } from '../../helpers';
+import { beginMessage } from "../../cell";
 import { CommonContractBase } from './abcCommon';
 
 export type NftData = {
@@ -18,7 +13,7 @@ export type NftData = {
     itemIndex: bigint,
     collectionAddress: Address,
     ownerAddress: Address | null,
-    content: string,
+    content: Cell,
 };
 
 export type TransferNftConfig = {
@@ -78,13 +73,14 @@ export abstract class NftItemContractBase<T extends NftOpcodesType> extends Comm
 
     async getNftData(provider: ContractProvider): Promise<NftData> {
         const result = await provider.get('get_nft_data', []);
-        return {
+        let common = {
             statusInit: Boolean(result.stack.readNumber()),
             itemIndex: result.stack.readBigNumber(),
             collectionAddress: result.stack.readAddress(),
             ownerAddress: result.stack.readAddressOpt(),
-            content: (result.stack.readCell()).beginParse().loadStringTail()
+            content: result.stack.readCell()
         };
+        return common
     }
 }
 

@@ -1,8 +1,6 @@
-import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Dictionary, Sender, SendMode, ShardAccount, Slice } from '@ton/core';
-import { beginMessage, codeFromString, emptyCell } from "../../helpers";
-
+import { Address, beginCell, Cell, ContractProvider } from '@ton/core';
+import { NftContent, parseMeta } from '../../meta';
 import { CommonContractBase } from './abcCommon';
-
 
 export type ContentConfig = {
     collectionContent: Cell,
@@ -28,14 +26,20 @@ export abstract class NftMinterContractBase<T extends NftMinterOpcodesType> exte
         const result = await provider.get('get_collection_data', []);
         const res = {
             index: result.stack.readBigNumber(),
-            content: "",
-            owner: (null as unknown) as Address
-        };
-        const cntSlice = result.stack.readCell().beginParse();
-        cntSlice.loadUint(8);
-        res.content = cntSlice.loadStringTail();
-        res.owner = result.stack.readAddress();
-        return res;
+            content: parseMeta<NftContent>(result.stack.readCell()),
+            owner:result.stack.readAddress()
+        }
+        return res
+    }
+
+    async getCollectionDataRaw(provider: ContractProvider) {
+        const result = await provider.get('get_collection_data', []);
+        const res = {
+            index: result.stack.readBigNumber(),
+            content: result.stack.readCell(),
+            owner:result.stack.readAddress()
+        }
+        return res
     }
 
     async getNftAddress(provider: ContractProvider, index: bigint | number) {
@@ -61,8 +65,6 @@ export abstract class NftMinterContractBase<T extends NftMinterOpcodesType> exte
             cell: opts.individualContent
         }]);
 
-        const resSlice = result.stack.readCell().beginParse();
-        resSlice.loadUint(8);
-        return resSlice.loadStringTail();
+        return parseMeta<NftContent>(result.stack.readCell())
     }
 }

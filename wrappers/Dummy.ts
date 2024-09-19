@@ -61,7 +61,9 @@ export class DummyContract extends CommonContractBase {
         ptonWalletAddress: Address,
         to: Address,
         amount: bigint,
-        payload?: Cell
+        payload?: Cell,
+        fwdAmount?: bigint,
+        responseAddress?: Address,
     }, value: bigint) {
         await provider.internal(via, {
             value: value,
@@ -70,7 +72,10 @@ export class DummyContract extends CommonContractBase {
                 .storeAddress(opts.ptonWalletAddress)
                 .storeAddress(opts.to)
                 .storeCoins(opts.amount)
-                .storeCoins(0n)
+                .storeCoins(opts.fwdAmount ?? 0n)
+                .storeRef(beginCell()
+                    .storeAddress(opts.responseAddress ?? null)
+                .endCell())
                 .storeMaybeRef(opts.payload)
                 .endCell(),
         });

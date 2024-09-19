@@ -5,9 +5,9 @@
         int jetton_amount = in_msg_body~load_coins();
         slice to_owner_address = in_msg_body~load_msg_addr();
 
-        _ = in_msg_body~load_msg_addr();    ;; skip response_address
+        slice response_address = in_msg_body~load_msg_addr(); 
         _ = in_msg_body~load_dict();        ;; skip custom_payload
-        _ = in_msg_body~load_coins();       ;; skip fwd_amount
+        int fwd_amount = in_msg_body~load_coins();     
         
         ;; payload is std jetton transfer payload
         slice either_forward_payload = in_msg_body;     ;; send transfer payload forward
@@ -17,18 +17,46 @@
 
         storage::save();
     
-        ;; need to carry remaining gas + jetton_amount
-        ;; storage fee paid by owner
-        msgs::send_nobounce(
-            jetton_amount, 
-            to_owner_address, 
-            any::ton_transfer(
-                jetton_amount, 
+        ;; reserve (original_balance + storage_fees) - jetton_amount
+        raw_reserve(jetton_amount - storage_fees(), BALANCE_DECREASED + BALANCE_INCREASED);
+
+        if (~ response_address.address::is_type(ADDR_TYPE_STD)) 
+            | response_address.equal_slices(to_owner_address) {
+            ;; no separate excess sending
+            ;; need to carry remaining_gas + jetton_amount
+            ;; storage fee paid by user
+
+            ;; in case of pton-to-pton msg, it try to refund to 
+            ;; original sender here since it doesn't know any other address
+            msgs::send_nobounce(
+                0, 
                 to_owner_address, 
-                either_forward_payload
-            ), 
-            CARRY_REMAINING_GAS | BOUNCE_IF_FAIL
-        );
+                any::ton_transfer(
+                    jetton_amount, 
+                    ctx.at(SENDER), 
+                    either_forward_payload
+                ), 
+                CARRY_ALL_BALANCE | BOUNCE_IF_FAIL
+            );
+        } else {
+            ;; send exactly jetton_amount + fwd_gas to target address
+            ;; carry remaining_gas to response_address 
+
+            ;; in case of pton-to-pton msg, it try to refund to 
+            ;; response address here since it's set
+            msgs::send_nobounce(
+                jetton_amount + fwd_amount, 
+                to_owner_address, 
+                any::ton_transfer(
+                    jetton_amount, 
+                    response_address, 
+                    either_forward_payload
+                ), 
+                PAID_EXTERNALLY | BOUNCE_IF_FAIL
+            );
+
+            utils::send_excesses(0, response_address, QCARRY_ALL_BALANCE);
+        }
 
         return (true);
     }

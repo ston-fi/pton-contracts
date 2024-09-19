@@ -1,18 +1,15 @@
 import {
     Address,
     beginCell,
-    Builder,
     Cell,
     ContractProvider,
-    Dictionary,
     Sender,
     SendMode,
     Slice
 } from '@ton/core';
 
-import { sha256_sync } from '@ton/crypto';
-import fs from 'fs';
-import { beginMessage, emptyCell, toSnakeCase } from "../../helpers";
+import { beginMessage, emptyCell } from "../../cell";
+import { JettonContent, parseMeta } from '../../meta';
 import { CommonContractBase } from './abcCommon';
 
 export type MintMsgConfig = {
@@ -54,83 +51,6 @@ export type JettonData = {
     jettonWalletCode: Cell,
     content: JettonContent | string;
 };
-
-export type JettonContent = {
-    uri?: string,
-    name?: string,
-    description?: string,
-    image?: string,
-    imageData?: string,
-    symbol?: string,
-    decimals?: string | number,
-};
-
-export function onchainMetadata(params: JettonContent) {
-    const cellMaxSizeBytes = Math.floor((1023 - 8) / 8);
-    const snakePrefix = 0x00;
-
-    const dict: Dictionary<Buffer, Cell> = Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
-
-    let key: keyof typeof params;
-    for (key in params) {
-        if (typeof key === "undefined") {
-            continue;
-        }
-
-        let encoding: "ascii" | "utf8";
-        if (key === "image") {
-            encoding = "ascii";
-        } else {
-            encoding = "utf8";
-        }
-        const value = params[key]?.toString() as string;
-
-        let bufferToStore: Buffer;
-        if (key === "imageData") {
-            const file = fs.readFileSync(value);
-            bufferToStore = file
-        } else {
-            bufferToStore = Buffer.from(value, encoding);
-        }
-        
-        const rootB = beginCell().storeUint(snakePrefix, 8);
-
-        let currentB = rootB;
-        let builders: Builder[] = [];
-        while (bufferToStore.length > 0) {
-            builders.push(currentB);
-            currentB.storeBuffer(bufferToStore.subarray(0, cellMaxSizeBytes));
-            bufferToStore = bufferToStore.subarray(cellMaxSizeBytes);
-            if (bufferToStore.length > 0) {
-                currentB = beginCell();
-            }
-        }
-
-        for (let i = builders.length - 1; i > 0; i--) {
-            builders[i - 1].storeRef(builders[i].endCell());
-        }
-        const finalCell = builders[0].endCell();
-
-        dict.set(sha256_sync(toSnakeCase(key)), finalCell);
-    }
-    return dict;
-}
-
-export function metadataCell(content: string | Dictionary<Buffer, Cell>): Cell {
-    let res: Cell;
-    if (typeof content === "string") {
-        res = beginCell()
-            .storeUint(0x01, 8)
-            .storeStringTail(content)
-            .endCell();
-    } else {
-        res = beginCell()
-            .storeUint(0x00, 8)
-            .storeDict(content)
-            .endCell();
-    }
-    return res;
-}
 
 export type JettonMinterOpcodesType = {
     burnNotification: number | bigint,
@@ -257,46 +177,8 @@ export abstract class JettonMinterContractBase<T extends JettonMinterOpcodesType
                 content: ""
             };
 
-            const contentSlice = res.contentRaw.beginParse();
-            const contentType = contentSlice.loadUint(8);
-
-            if (contentType === 1) {
-                res.content = contentSlice.loadStringTail();
-            } else {
-                const keys = ["uri", "name", "description", "image", "symbol", "decimals"] as const;
-                let contentRes: JettonContent = {};
-
-                const dict = contentSlice.loadDict(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
-
-                let key: keyof JettonContent;
-                for (key of keys) {
-                    let val = dict.get(sha256_sync(key));
-                    if (typeof val === "undefined") {
-                        continue;
-                    }
-
-                    let encoding: "utf8" | "ascii";
-                    if (key === "image") {
-                        encoding = "ascii" as const;
-                    } else {
-                        encoding = "utf8" as const;
-                    }
-
-                    let resRead: Buffer = Buffer.from("");
-                    let sc = val.beginParse();
-                    if (sc.preloadUint(8) === 0) {
-                        sc.loadUint(8);
-                    }
-                    while (true) {
-                        let newData = sc.loadBits(sc.remainingBits);
-                        resRead = Buffer.concat([resRead, newData.subbuffer(0, newData.length) as Buffer]);
-                        if (sc.remainingRefs === 0) break;
-                        sc = sc.loadRef().beginParse();
-                    }
-                    contentRes[key] = resRead.toString(encoding);
-                }
-                res.content = contentRes;
-            }
+            res.content = parseMeta<JettonContent>(res.contentRaw)
+    
         } catch (err) {
             if ((err as any).toString().includes("Exit code: 9")) {
                 let ctrState = await provider.getState();

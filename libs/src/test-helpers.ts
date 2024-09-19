@@ -36,7 +36,7 @@ export function expectNullAddress(received: Address | null) {
 }
 
 export function expectNotBounced(eventOrEvents: Event[] | Event) {
-    if (eventOrEvents instanceof Array) {
+    if (Array.isArray(eventOrEvents)) {
         for (let event of eventOrEvents) {
             if (event.type === "message_sent") {
                 expect(event.bounced).toBeFalsy();
@@ -48,7 +48,7 @@ export function expectNotBounced(eventOrEvents: Event[] | Event) {
 }
 
 export function expectBounced(eventOrEvents: Event[] | Event) {
-    if (eventOrEvents instanceof Array) {
+    if (Array.isArray(eventOrEvents)) {
         let flag = 0;
         for (let event of eventOrEvents) {
             if (event.type === "message_sent") {

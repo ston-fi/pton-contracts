@@ -1,6 +1,7 @@
 node_modules
 temp
 .vscode
+.idea
 
 build/*compiled.json
 build/*config.json
@@ -13,3 +14,6 @@ build/
 
 # Yarn
 .yarn/
+
+package-lock.json
+yarn.lock

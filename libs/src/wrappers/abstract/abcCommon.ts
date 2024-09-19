@@ -1,6 +1,6 @@
-import { Blockchain } from "@ton/sandbox";
 import { Address, Cell, Contract, ContractProvider, SendMode, Sender, ShardAccount, contractAddress } from "@ton/core";
-import { emptyCell } from "../../helpers";
+import { Blockchain } from "@ton/sandbox";
+import { emptyCell } from "../../cell";
 
 export abstract class CommonContractBase implements Contract {
     constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell; }) { }

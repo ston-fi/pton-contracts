@@ -1,11 +1,12 @@
-import { parseAddress } from "./helpers";
-import { DEFAULT_PTON_MAINNET_ADDRESS, PTON_MAINNET_ADDRESS_v1 } from "./wrappers/PTon";
+import { parseAddress } from "./address";
+import { DEFAULT_PTON_MAINNET_ADDRESS, PTON_MAINNET_ADDRESS_v1, PTON_MAINNET_ADDRESS_v2, PTON_TESTNET_ADDRESS_v2 } from "./wrappers/PTon";
 
 export const tokenAddresses = new Map(Object.entries({
     // project tokens
     ton     : DEFAULT_PTON_MAINNET_ADDRESS,
     pton    : DEFAULT_PTON_MAINNET_ADDRESS,
-    ptonv1  : PTON_MAINNET_ADDRESS_v1,
+    pton1   : PTON_MAINNET_ADDRESS_v1,
+    pton2   : PTON_MAINNET_ADDRESS_v2,
     ston    : parseAddress("EQA2kCVNwVsil2EM2mB0SkXytxCqQjS4mttjDpnXmwG9T6bO"),
     gemston : parseAddress("EQBX6K9aXVl3nXINCyPPL86C4ONVmQ8vK360u6dykFKXpHCa"),
     usdt    : parseAddress("EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"),
@@ -38,11 +39,14 @@ export const tokenAddresses = new Map(Object.entries({
     tt3_2   : parseAddress("EQAIUIuQjaBbc_X6ltbr50X2SUlPwmjbN4KlaccDY-Zy93kv"),
     psston  : parseAddress("EQDJOKF1ushAlAirhxgBTMvw1Lvv1__IJDj0JuXjBwvgju6L"),
     test    : parseAddress("EQBIp6Peg0E95xpEkRdIZJhLHk3uMgzdxWA8s5GUTFF1ZkzE"),
+    itst    : parseAddress("EQCEVYBuQ96bLCSNTz5PFps2yVDsGEqztNDfqzIvmSlLu_bI"),
+    ptst    : parseAddress("EQDOqcaZaoEIqzuMiQPIzam23dv4IDYr4U4nDG-O8zLFkkCZ"),
 
     // testnet
     testReward  : parseAddress("EQB-sABlgq41W4jvcbxSD81Oh7O12VtAzJ0eXvAYeQNRq4di"),
     testStake   : parseAddress("EQD-bXJFImJ0uWRKfBE674QxWgVxlUo0B7BDLDHT2R3Qlzst"),
     testSton    : parseAddress("EQCH-yP4S3nA_j7K7EIV1QIhVTWMyNJfxeYzacUH76ks2hUF"),
+    pton2Test   : PTON_TESTNET_ADDRESS_v2
 }))
 
 export function parseTokenAddress(inp: string) {
@@ -52,3 +56,5 @@ export function parseTokenAddress(inp: string) {
     }
     return minterAddress
 }
+
+

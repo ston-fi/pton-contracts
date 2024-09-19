@@ -29,4 +29,4 @@ The following assumes the use of `node@>=18`.
 
 ## Licensing
 
-The license for pTON contracts is MIT, see [LICENSE](LICENSE).
+The license for pTON contracts is the MIT, see [LICENSE](LICENSE)..

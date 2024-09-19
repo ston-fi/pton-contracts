@@ -1,9 +1,6 @@
 import {
     Address,
-    beginCell,
     Cell,
-    Contract,
-    contractAddress,
     ContractProvider,
     Dictionary,
     Sender,
@@ -11,7 +8,7 @@ import {
     Slice
 } from '@ton/core';
 
-import { beginMessage, codeFromString, emptyCell } from "../../helpers";
+import { beginMessage } from "../../cell";
 import { CommonContractBase } from './abcCommon';
 
 export type JettonWalletData = {
