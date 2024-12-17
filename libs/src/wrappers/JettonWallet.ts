@@ -4,7 +4,7 @@ import {
     Cell
 } from '@ton/core';
 
-import { codeFromString } from "../cell";
+import { cellToBocStr, codeFromString } from "../cell";
 import { JettonWalletContractBase } from './abstract/abcJettonWallet';
 
 export type JettonWalletConfig = {
@@ -13,6 +13,16 @@ export type JettonWalletConfig = {
     jettonMasterAddress: Address,
     jettonWalletCode?: Cell,
 };
+
+export function jettonWalletStorageParser(src: Cell) {
+    let ds = src.beginParse()
+    return {
+        balance: ds.loadCoins(),
+        owner: ds.loadAddress(),
+        master: ds.loadAddress(),
+        lpWalletCode: cellToBocStr(ds.loadRef()),
+    }
+}
 
 export function jettonWalletConfigToCell(config: JettonWalletConfig): Cell {
     return beginCell()

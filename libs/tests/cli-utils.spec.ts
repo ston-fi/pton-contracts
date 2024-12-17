@@ -1,6 +1,7 @@
 import '@ton/test-utils';
 import { findArgs, isArgPresent } from '../src/cli-utils';
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Cli', () => {
 
     it('should test findArgs', async () => {

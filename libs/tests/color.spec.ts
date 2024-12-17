@@ -1,6 +1,7 @@
 import '@ton/test-utils';
 import { colorText, decolorText, loggerBuilder } from "../src/color";
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Color', () => {
 
     it('should color text', async () => {

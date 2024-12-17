@@ -7,8 +7,9 @@ import {
     SendMode
 } from '@ton/core';
 
-import { beginMessage, codeFromString } from "../cell";
+import { beginMessage, cellToBocStr, codeFromString } from "../cell";
 import { JettonMinterContractBase } from './abstract/abcJettonMinter';
+import { parseMeta } from '../meta';
 
 export type JettonMinterConfig = {
     totalSupply: number | bigint,
@@ -24,6 +25,16 @@ export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
         .storeRef(config.content)
         .storeRef(config.jettonWalletCode)
         .endCell();
+}
+
+export function jettonMinterStorageParser(src: Cell) {
+    let ds = src.beginParse()
+    return {
+        supply: ds.loadCoins(),
+        admin: ds.loadMaybeAddress(),
+        content: parseMeta(ds.loadRef()),
+        walletCode: cellToBocStr(ds.loadRef()),
+    }
 }
 
 export const jMinterOpcodes = {

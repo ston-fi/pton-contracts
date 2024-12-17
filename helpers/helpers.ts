@@ -62,7 +62,7 @@ export function createMDGraphLocal(params: {
     const details = true
 
     createMdGraph({
-        chartType: params.chartType ?? "TB",
+        chartType: params.chartType ?? "LR",
         hideOkValues: params.hideOkValues ?? true,
         displayValue: params.displayValue ?? details,
         displayTokens: params.displayTokens ?? details,

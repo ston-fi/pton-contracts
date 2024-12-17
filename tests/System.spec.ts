@@ -533,7 +533,7 @@ describe('System', () => {
                 gas: toNano("0.001"),
                 wallet: wallet,
                 debugGraph: "from_user_refund_no_gas",
-                expectRefund: true,
+                expectBounce: true,
             })
         });
 

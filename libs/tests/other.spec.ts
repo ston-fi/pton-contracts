@@ -1,7 +1,8 @@
 import '@ton/test-utils';
 import { crc32 } from "../src/crc32";
 import { parseVersion, toHexStr, toRevStr, toSnakeCase } from '../src/utils';
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Other', () => {
 
 

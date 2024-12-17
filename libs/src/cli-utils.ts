@@ -1,6 +1,9 @@
 import { type NetworkProvider } from '@ton/blueprint';
 import { prompt } from "./utils";
 
+/**
+ * @deprecated use `run(provider: NetworkProvider, args: string[])` cli signature instead
+ */
 export function findArgs(processArgs: string[], searchArgs: string[] | string, strict = true) {
     const searchArgsList = (typeof searchArgs === 'string' ? [searchArgs] : searchArgs).map((val) => val.toLowerCase());
 

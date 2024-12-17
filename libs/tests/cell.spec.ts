@@ -3,7 +3,8 @@ import '@ton/test-utils';
 import fs from 'fs';
 import { parseAddress } from "../src/address";
 import { beginMessage, cellFromStrFile, cellToBocStr, codeFromString, createInternalMsgCell, emptyCell, Flags, getContractCode, stringCell } from "../src/cell";
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Cell', () => {
 
 

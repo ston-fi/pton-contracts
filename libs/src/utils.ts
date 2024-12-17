@@ -89,4 +89,14 @@ export function parseVersion(versionString?: string): [number, number, number, s
     }
 }
 
-
+export function parseArg<K, T, V>(src: K, primary: (inp: K) => T, fallback?: (inp: K) => V) {
+    try {
+        return primary(src)
+    } catch (err) {
+        if (fallback) {
+            return fallback(src)
+        } else {
+            throw err
+        }
+    }
+}

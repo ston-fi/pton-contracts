@@ -1,6 +1,8 @@
-import { defaultCodeMap, stdFtOpCodes, stonFiDexCodesV2 } from "./codes";
+import { stdFtOpCodes, stonFiDexCodesV2 } from "./codes";
 import { fromNanos } from "./balances";
 import { codeFromString } from "./cell";
+import { defaultCodeMap } from "./graph";
+import { dateFromSec } from "./time";
 
 export function parsePayToV2(src: string, mode?: "core" | "full" | "nocell") {
     mode = mode ?? "nocell"
@@ -58,6 +60,72 @@ export function parsePayToV2(src: string, mode?: "core" | "full" | "nocell") {
             token0Address: additional.token0Address,
             amount1: additional.amount1,
             token1Address: additional.token1Address,
+        }
+    }
+}
+
+export function parseSwapV2(src: string, mode?: "core" | "full" | "nocell") {
+    mode = mode ?? "nocell"
+    let ds = codeFromString(src).beginParse()
+    let op = ds.loadUint(32)
+    if (op !== stdFtOpCodes.ftTransferNotification) {
+        throw new Error("is not a transfer_notification op")
+    }
+    let jetton = {
+        qId: ds.loadUint(64),
+        jettonAmount: ds.loadCoins(),
+        fromAddress: ds.loadAddress(),
+    }
+    ds = ds.loadRef().beginParse()
+    op = ds.loadUint(32)
+    if (op !== stonFiDexCodesV2.swapDexV2) {
+        throw new Error("is not a lp_provide op")
+    }
+    let primary = {
+        otherTokenWallet: ds.loadAddress(),
+        refundAddress: ds.loadAddress(),
+        excessesAddress: ds.loadAddress(),
+        deadline: ds.loadUintBig(64),
+    }
+    ds = ds.loadRef().beginParse()
+    let additional = {
+        minOut: ds.loadCoins(),
+        toAddress: ds.loadAddress(),
+        fwdGas : ds.loadCoins(),
+        customPayload: ds.loadMaybeRef(),
+        refundFwdGas : ds.loadCoins(),
+        refundPayload: ds.loadMaybeRef(),
+        refFee : ds.loadUint(16),
+        refAddress: ds.loadMaybeAddress(),
+    }
+
+    let coreDisp = {
+        op: "swap_v2.1",
+        jettonAmount: jetton.jettonAmount,
+        toAddress: additional.toAddress,
+        otherTokenWallet: primary.otherTokenWallet,
+        minOut: additional.minOut,
+        deadline: dateFromSec(primary.deadline),
+        fwdAmount: fromNanos(additional.fwdGas),
+    }
+    if (mode === "core") {
+        return {
+            ...coreDisp,
+            customPayload: additional.customPayload ? true : false,
+        }
+    } else if (mode === "full") {
+        return {
+            ...coreDisp,
+            excessesAddress: primary.excessesAddress,
+            refundAddress: primary.refundAddress,    
+            customPayload: additional.customPayload,
+        }
+    } else if (mode === "nocell") {
+        return {
+            ...coreDisp,
+            excessesAddress: primary.excessesAddress,
+            refundAddress: primary.refundAddress,    
+            customPayload: additional.customPayload ? true : false,
         }
     }
 }
@@ -158,6 +226,54 @@ export function parseCBAddLiqV1(src: string, mode?: "core" | "full" | "nocell") 
     } else if (mode === "nocell") {
         return {
             ...coreDisp,
+        }
+    }
+}
+
+export function parseCBAddLiqV2(src: string, mode?: "core" | "full" | "nocell") {
+    mode = mode ?? "nocell"
+    let ds = codeFromString(src).beginParse()
+    let op = ds.loadUint(32)
+    if (op !== 0x6ecd527) {
+        throw new Error("is not a cb_add_liquidity op")
+    }
+    let data = {
+        qId: ds.loadUint(64),
+        amount1: ds.loadCoins(),
+        amount2: ds.loadCoins(),
+        user: ds.loadAddress(),
+        minOut: ds.loadCoins(),
+        fwdAmount: ds.loadCoins(),
+    }
+
+    let coreDisp = {
+        op: "cb_add_liquidity_v2.1",
+        amount1: data.amount1,
+        amount2: data.amount2,
+        user: data.user,
+        minOut: data.minOut,
+        fwdAmount: fromNanos(data.minOut)
+    }
+    ds = ds.loadRef().beginParse()
+    let additional = {
+        toAddress: ds.loadAddress(),
+        refund: ds.loadAddress(),
+        excess: ds.loadAddress(),
+    }
+    if (mode === "core") {
+        return {
+            ...coreDisp,
+            ...additional
+        }
+    } else if (mode === "full") {
+        return {
+            ...coreDisp,
+            ...additional
+        }
+    } else if (mode === "nocell") {
+        return {
+            ...coreDisp,
+            ...additional
         }
     }
 }

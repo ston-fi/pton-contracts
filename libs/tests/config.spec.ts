@@ -2,7 +2,8 @@ import '@ton/test-utils';
 import { parseAddress } from "../src/address";
 import { CliConfig, resolvers } from '../src/config';
 import { JettonContent, NftContent } from '../src/meta';
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Config', () => {
     const paramsAll = {
         paramStr: resolvers.string,

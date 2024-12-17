@@ -10,7 +10,7 @@
 
         ;; refund_address workchain is not checked, masterchain address is allowed
         ;; check if valid address type, will bounce call if not
-        throw_unless(error::invalid_address, refund_address.preload_uint(2) == params::addr_std_type);
+        throw_unless(error::invalid_address, refund_address.address::is_type(ADDR_TYPE_STD));
 
         try {
             ;; value is greater than ton amount to tokenize
@@ -25,7 +25,8 @@
 
             ;; prev balance + ton_amount
             ;; storage fee paid by sender
-            reserves::exact((ctx.at(BALANCE) - ctx.at(MSG_VALUE)) + storage_fees() + ton_amount);
+            raw_reserve((ctx.at(BALANCE) - ctx.at(MSG_VALUE)) + storage_fees() + ton_amount, RESERVE_EXACTLY | BOUNCE_IF_FAIL);
+
             msgs::send_simple(
                 0, 
                 storage::owner_address, 

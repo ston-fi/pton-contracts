@@ -180,7 +180,7 @@ export abstract class JettonMinterContractBase<T extends JettonMinterOpcodesType
             res.content = parseMeta<JettonContent>(res.contentRaw)
     
         } catch (err) {
-            if ((err as any).toString().includes("Exit code: 9")) {
+            if (((err as any).toString() as string).toLowerCase().includes("code: 9")) {
                 let ctrState = await provider.getState();
                 if (ctrState.state.type === "active") {
                     let data = ctrState.state.data;

@@ -1,6 +1,5 @@
 import fs from 'fs';
 import * as parser from "./parser/confParser";
-import { toGraphMap } from './graph';
 
 // https://docs.ton.org/learn/tvm-instructions/tvm-exit-codes
 export const tvmErrorCodes = {
@@ -42,6 +41,7 @@ export const stdNftOpCodes = {
 // https://github.com/ton-blockchain/token-contract/blob/main/ft/op-codes.fc
 export const stdFtOpCodes = {
     ftTransfer: 0xf8a7ea5,
+    ftInternalTransfer: 0x178d4519,
     ftTransferNotification: 0x7362d09c,
     ftBurn: 0x595f07bc,
     ftProvideWalletAddress: 0x2c76b973,
@@ -65,6 +65,7 @@ export const stonFiDexCodesV1 = {
     burnExtDexV1: 0x595f07bc,
     directAddLiquidityDexV1: 0x4cf82803,
     refundMeDexV1: 0xbf3f447,
+    payToDexV1: 0xf93bb43f,
 } as const;
 
 export const stonFiDexCodesV2 = {
@@ -92,6 +93,7 @@ export const stonFiDexCodesV2 = {
     vaultPayToDexV2: 0x2100c922,
     cbRefundMeDexV2: 0xf98e2b8,
     addLiquidityDexV2: 0x50c6a654,
+    depositRefFeeDexV2: 0x537c5a70,
 } as const;
 
 export const stonFiFarmCodesV3 = {
@@ -136,17 +138,6 @@ export const stonFiPtonCodesV2 = {
     tonTransferPtonV2: 0x01f3835d,
     deployWalletPtonV2: 0x4f5f4313
 } as const;
-
-export const defaultCodeMap = toGraphMap({
-    ...stdFtOpCodes,
-    ...stdNftOpCodes,
-    ...tvmErrorCodes,
-    ...stonFiPtonCodesV1,
-    ...stonFiPtonCodesV2,
-    ...stonFiFarmCodesV3,
-    ...stonFiDexCodesV1,
-    ...stonFiDexCodesV2,
-});
 
 export function parseErrorsFromStr(src: string) {
     const entries = parser.parse(src);

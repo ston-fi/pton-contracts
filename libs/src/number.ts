@@ -12,6 +12,15 @@ export function intNumber(inp: any) {
     return Number(BigInt(inp));
 }
 
+export function isBnStr(inp: any) {
+    try {
+        BigInt(inp)
+        return true
+    } catch {
+        return false
+    }
+}
+
 export function divUp(val1: bigint, val2: bigint) {
     return val1 / val2 + (val1 % val2 === 0n ? 0n : 1n);
 }

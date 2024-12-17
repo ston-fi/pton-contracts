@@ -1,6 +1,7 @@
 import '@ton/test-utils';
 import {toRevStr} from "../src/utils";
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Utils', () => {
     describe('toRevStr', () => {
         it('work with empty string', async () => {

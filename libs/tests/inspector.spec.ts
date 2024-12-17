@@ -2,7 +2,8 @@ import '@ton/test-utils';
 import { ContractInspector } from '../src/inspector';
 import { DEFAULT_JETTON_MINTER_CODE } from '../src/wrappers/JettonMinter';
 import { DEFAULT_JETTON_WALLET_CODE } from '../src/wrappers/JettonWallet';
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Inspector', () => {
 
     it('should parse jetton minter contract', async () => {

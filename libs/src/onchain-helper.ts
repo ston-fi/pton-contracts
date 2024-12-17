@@ -1,12 +1,13 @@
 import { NetworkProvider } from '@ton/blueprint';
-import { Address, Contract, OpenedContract } from "@ton/core";
-import { TonClient4 } from "@ton/ton";
+import { Address, Contract, OpenedContract, TupleReader } from "@ton/core";
+import { TonClient, TonClient4 } from "@ton/ton";
 import * as color from "./color";
 import { JettonContent } from "./meta";
 import { Optional } from "./types";
 import { sleep } from "./utils";
 import { JettonMinterContract } from "./wrappers/JettonMinter";
 import { JettonData } from "./wrappers/abstract/abcJettonMinter";
+import { tvmErrorCodes } from './codes';
 
 export type Explorer = "tonscan" | "tonviewer" | "toncx" | "dton";
 
@@ -61,7 +62,7 @@ export function getExpLink(provider: NetworkProvider, address: Address | null | 
             case "dton":
                 return `https://${networkPrefix}dton.io/a/${address}`;
             default:
-                return `https://${networkPrefix}tonscan.org/address/${address}`;
+                return `https://${networkPrefix}tonviewer.com/${address}`;
         }
     }
 }
@@ -72,13 +73,31 @@ export async function getSeqNo(provider: NetworkProvider, address: Address, trie
     return await runWithRetry(async () => {
         if (await provider.isContractDeployed(address)) {
             let client = provider.api();
+            let runGetMethod: (method: string) => Promise<[TupleReader, number]>
             if (client instanceof TonClient4) {
-                const res = await client.runMethod((await client.getLastBlock()).last.seqno, address, 'seqno');
-                return res.reader.readNumber();
+                runGetMethod = async (method: string) => { 
+                    const res = await client.runMethod((await client.getLastBlock()).last.seqno, address, method)
+                    return [res.reader, res.exitCode] as const
+                }
             } else {
-                const res = await client.runMethod(address, 'seqno');
-                return res.stack.readNumber();
+                runGetMethod = async (method: string) => { 
+                    const res = await client.runMethod(address, method)
+                    return [res.stack, 0] as const
+                }
             }
+            let seqno: number
+
+            const res = await runGetMethod("seqno")
+            seqno = res[0].readNumber()
+            if ((seqno === 85143 && client instanceof TonClient) || (res[1] === tvmErrorCodes.getMethodNotFound11)) {
+                const res = await runGetMethod("get_multisig_data")
+                if (res[1] !== 0) {
+                    throw new Error("method not found")
+                }
+                seqno = res[0].readNumber()
+            }
+
+            return seqno
         }
 
         return 0;
@@ -257,3 +276,28 @@ export async function waitForDeploy(provider: NetworkProvider, target: Address |
         return false;
     }
 }
+
+export async function getAccount(provider: NetworkProvider, target: Address | OpenedContract<Contract>) {
+    const targetAddress = target instanceof Address ? target : target.address;
+    let client = provider.api();
+    if (client instanceof TonClient) {
+        throw new Error("TonClient does not support this method")
+    }
+    let data = await client.getAccount((await client.getLastBlock()).last.seqno, targetAddress)
+
+    return {
+        workchain: data.block.workchain,
+        shard: data.block.shard,
+        seqno: data.block.seqno,
+        state: data.account.state.type,
+        balance: BigInt(data.account.balance.coins),
+        storage: {
+            lastPaid: data.account.storageStat?.lastPaid ? data.account.storageStat.lastPaid : null,
+            duePayment: data.account.storageStat?.duePayment ? BigInt(data.account.storageStat.duePayment) : null,
+            bits: data.account.storageStat?.used.bits ? data.account.storageStat.used.bits : null,
+            cells: data.account.storageStat?.used.cells ? data.account.storageStat.used.cells : null,
+            publicCells: data.account.storageStat?.used.publicCells ? data.account.storageStat.used.publicCells : null,
+        }
+
+    }
+} 

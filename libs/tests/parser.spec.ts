@@ -1,7 +1,8 @@
 import '@ton/test-utils';
 import * as parser from "../src/parser/confParser";
 import { parseOpFromStr, parseErrorsFromStr } from '../src/codes';
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Parser', () => {
 
     const ops = `

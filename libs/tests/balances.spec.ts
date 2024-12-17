@@ -5,7 +5,8 @@ import { fromNanos, getWalletBalance, toCoins } from "../src/balances";
 import { metadataCell, onchainMetadata } from '../src/meta';
 import { DEFAULT_JETTON_MINTER_CODE, JettonMinterContract } from '../src/wrappers/JettonMinter';
 import { DEFAULT_JETTON_WALLET_CODE, JettonWalletContract } from '../src/wrappers/JettonWallet';
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Balances', () => {
 
 

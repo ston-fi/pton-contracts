@@ -1,4 +1,4 @@
-import { DictionaryValue, Slice, Cell, Dictionary } from "@ton/core";
+import { DictionaryValue, Slice, Cell, Dictionary, beginCell } from "@ton/core";
 import { calculateCrc16 } from "./crc16";
 
 export function createSliceValue(): DictionaryValue<Slice> {
@@ -47,5 +47,13 @@ export class ContractInspector {
         }
 
         return this.methodsMapDecompiled.get(searchedId);
+    }
+
+    public loadMethodCell(functionSelector: string | number) {
+        let methodSlice = this.loadMethod(functionSelector)
+        if (methodSlice === undefined) {
+            return undefined
+        }
+        return beginCell().storeSlice(methodSlice).endCell()
     }
 }

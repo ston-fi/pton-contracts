@@ -1,14 +1,27 @@
 export { resolvers, CliConfig } from "./src/config";
 
 export {
+    MdTable,
+    MdHighlightType,
+    ColorType,
+    StyleType,
+    MdEntryFull,
+    MdColumnFull,
+    MdColumn,
+    MdEntry,
+} from "./src/table"
+
+export {
     parsePayToV2,
     parseLpV2,
     parseCBAddLiqV1,
+    parseCBAddLiqV2,
+    parseSwapV2,
 } from "./src/tx-parsers"
 
 export {
-    tokenAddresses,
     parseTokenAddress,
+    tokenAddresses,
 } from "./src/tokens"
 
 export {
@@ -38,7 +51,6 @@ export {
     tvmErrorCodes,
     stdNftOpCodes,
     stdFtOpCodes,
-    defaultCodeMap,
     stonFiDexCodesV1,
     stonFiDexCodesV2,
     stonFiFarmCodesV3,
@@ -59,12 +71,26 @@ export {
     BracketKeysType,
     GraphArgsType,
     SandboxGraph,
+    StorageTableDisplay,
+    TableColorSettings,
+    StorageParser,
     toGraphMap,
     opEntries,
     createMdGraph,
     BracketType,
     DEFAULT_CAPTION_MAP,
+    defaultCodeMap
 } from "./src/graph";
+
+export {
+    FlattenableMapKey,
+    FlattenableValue,
+    FlattenedValue,
+    flattenArray,
+    flattenMap,
+    flattenValue,
+    flattenObject,
+} from "./src/flatten";
 
 export {
     Explorer,
@@ -76,7 +102,8 @@ export {
     getAccountBalance,
     fetchJettonData,
     getAccountState,
-    waitForDeploy
+    waitForDeploy,
+    getAccount
 } from "./src/onchain-helper";
 
 export {
@@ -85,6 +112,7 @@ export {
     fDate,
     prettyBalance,
     prettyState,
+    prettyNumber
 } from "./src/formatting";
 
 export {
@@ -97,14 +125,22 @@ export {
 } from "./src/time";
 
 export {
+    AddressLike,
+    AddressMap,
+    ExternalAddressStr,
+    ExternalAddressLike,
     padRawHexAddress,
     rawNumberToAddress,
     parseAddress,
-    HOLE_ADDRESS,
     isHole,
+    strAddress,
+    isAddrStr,
+    isExtAddrLike,
+    HOLE_ADDRESS,
 } from "./src/address";
 
 export {
+    Flags,
     beginMessage,
     emptyCell,
     stringCell,
@@ -113,12 +149,11 @@ export {
     cellToBocStr,
     getContractCode,
     createInternalMsgCell,
-    Flags,
 } from "./src/cell";
 
 export {
-    CRC_32_TABLE,
     crc32,
+    CRC_32_TABLE,
 } from "./src/crc32";
 
 export {
@@ -129,6 +164,7 @@ export {
     maxBigint,
     isBnArray,
     isBnOrNanoStr,
+    isBnStr
 } from "./src/number";
 
 export {
@@ -138,40 +174,43 @@ export {
     toRevStr,
     toSnakeCase,
     parseVersion,
+    parseArg,
 } from "./src/utils";
 
 export {
+    JettonContent,
     metadataCell,
     onchainMetadata,
-    JettonContent,
     parseMeta,
     processPublicKeys
 } from "./src/meta";
 
 export {
-    jettonMinterConfigToCell,
     JettonMinterConfig,
     JettonMinterContractDiscoverable,
     JettonMinterContract,
+    jettonMinterConfigToCell,
+    jettonMinterStorageParser,
     jMinterOpcodes,
     jMinterDiscOpcodes,
     DEFAULT_JETTON_MINTER_CODE,
     DEFAULT_JETTON_MINTER_CODE_DISCOVERABLE
 } from "./src/wrappers/JettonMinter";
 export {
-    mintMsgConfigToCell,
     MintMsgConfig,
     JettonData,
     JettonMinterOpcodesType,
     JettonMinterContractBase,
+    mintMsgConfigToCell,
 } from "./src/wrappers/abstract/abcJettonMinter";
 
 export { CommonContractBase } from "./src/wrappers/abstract/abcCommon";
 
 export {
-    jettonWalletConfigToCell,
     JettonWalletConfig,
     JettonWalletContract,
+    jettonWalletConfigToCell,
+    jettonWalletStorageParser,
     jWalletOpcodes,
     DEFAULT_JETTON_WALLET_CODE
 } from "./src/wrappers/JettonWallet";
@@ -198,13 +237,28 @@ export {
     nftMinterOpcodes
 } from "./src/wrappers/NftMinter";
 export {
-    contentConfigToCell,
     ContentConfig,
     NftMinterOpcodesType,
-    NftMinterContractBase
+    NftMinterContractBase,
+    contentConfigToCell,
 } from "./src/wrappers/abstract/abcNftMinter";
 
 export {
+    PTonMinterConfigV1,
+    PTonWalletConfigV1,
+    PTonMinterConfigV2,
+    PTonWalletConfigV2,
+    PTonMinterV1,
+    PTonWalletV1,
+    PTonMinterV2,
+    PTonWalletV2,
+    PTonMinterAbc,
+    PTonWalletAbc,
+    isPton,
+    pTonMinterConfigToCellV1,
+    pTonWalletConfigToCellV1,
+    pTonMinterConfigToCellV2,
+    pTonWalletConfigToCellV2,
     DEFAULT_PTON_MAINNET_ADDRESS,
     PTON_MAINNET_ADDRESS_v1,
     PTON_MAINNET_ADDRESS_v2,
@@ -219,27 +273,13 @@ export {
     pTonWalletOpcodesV1,
     pTonMinterOpCodesV2,
     pTonWalletOpcodesV2,
-    isPton,
-    pTonMinterConfigToCellV1,
-    pTonWalletConfigToCellV1,
-    pTonMinterConfigToCellV2,
-    pTonWalletConfigToCellV2,
-    PTonMinterConfigV1,
-    PTonWalletConfigV1,
-    PTonMinterConfigV2,
-    PTonWalletConfigV2,
-    PTonMinterV1,
-    PTonWalletV1,
-    PTonMinterV2,
-    PTonWalletV2,
-    PTonMinterAbc,
-    PTonWalletAbc,
 } from "./src/wrappers/PTon"
 
 export {
-    deployerConfigToCell,
     Deployer,
     DeployerConfig,
+    deployerConfigToCell,
+    getLatestDeployer,
     DEFAULT_DEPLOYER_CODE,
 } from "./src/wrappers/Deployer"
 
@@ -258,8 +298,8 @@ export {
 } from "./src/types";
 
 export {
+    calculateCrc16,
     CRC_16_TABLE,
-    calculateCrc16
 } from "./src/crc16"
 
 export {

@@ -1,7 +1,8 @@
 import '@ton/test-utils';
 import { beginCell } from '@ton/core';
-import { divUp, intNumber, isBnArray, isBnOrNanoStr, maxBigint, rndBigInt32, rndBigInt64 } from '../src/number';
-
+import { divUp, intNumber, isBnArray, isBnOrNanoStr, isBnStr, maxBigint, rndBigInt32, rndBigInt64 } from '../src/number';
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Numbers', () => {
 
 
@@ -57,6 +58,14 @@ describe('Numbers', () => {
         expect(isBnOrNanoStr("1")).toBeTruthy()
         expect(isBnOrNanoStr("0.000000001")).toBeTruthy()
         expect(isBnOrNanoStr("0.0000000001")).toBeFalsy()
+    });
+
+    it('should test isBnStr', async () => {
+        expect(isBnStr("1")).toBeTruthy()
+        expect(isBnStr("+1")).toBeTruthy()
+        expect(isBnStr("100000000000000000000000000000000000")).toBeTruthy()
+        expect(isBnStr("0.000000001")).toBeFalsy()
+        expect(isBnStr("0.0000000001")).toBeFalsy()
     });
 
 });

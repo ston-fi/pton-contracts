@@ -1,5 +1,93 @@
 # Changelog
 
+## [0.8.19] - 2024-12-02
+
+- deprecate `findArgs`
+- undeprecate `isArgPresent`
+
+## [0.8.18] - 2024-12-02
+
+- added `id` to `Deployer` config
+- added `getLatestDeployer`
+
+## [0.8.17] - 2024-11-29
+
+- added `getAccount`
+
+## [0.8.16] - 2024-11-29
+
+- added `parseExtAddrLike`
+
+## [0.8.15] - 2024-11-29
+
+- added support for `ExternalAddress`
+
+## [0.8.14] - 2024-11-22
+
+- `findArgs` is no longer deprecated
+
+## [0.8.13] - 2024-11-20
+
+- added `splitLength` param to table entries 
+- 0th column in `graph` table never splits
+
+## [0.8.12] - 2024-11-07
+
+- added `parseArg`
+
+## [0.8.11] - 2024-11-05
+
+- added `ton_transfer` parse in graph
+
+## [0.8.10] - 2024-11-05
+
+- added default codes for pton v2
+
+## [0.8.9] - 2024-10-30
+
+- added `deprecated` flag to cli arg related functions
+
+## [0.8.8] - 2024-10-28
+
+- `graph` replaces addresses in wrapped object if present in graph map
+- allow raw `Cell` in `FlattenableValue`: transforms to hex str
+
+## [0.8.7] - 2024-10-23
+
+- added `loadMethodCell` to `Inspector`
+
+## [0.8.6] - 2024-10-03
+
+- `getSeqNo` supports multisig seqno
+
+## [0.8.5] - 2024-10-02
+
+- config defaults to null only if file doesn't exist, properly throws otherwise
+
+## [0.8.4] - 2024-09-27
+
+- added `parseCBAddLiqV2`
+
+## [0.8.3] - 2024-09-26
+
+- added `parseSwapV2`
+
+## [0.8.2] - 2024-09-25
+
+- added prod pton v2 codes
+
+## [0.8.1] - 2024-09-23
+
+- display label instead of raw address in table if available
+
+## [0.8.0] - 2024-09-22
+
+- added `MdTable`
+- added storage parsing in `graph`
+- added `AddressMap`
+- refactored maps in graph to use `AddressMap`
+- various other helper functions & types
+
 ## [0.7.8] - 2024-09-17
 
 - fixed `[object Object]` serialization in config

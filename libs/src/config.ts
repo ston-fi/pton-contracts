@@ -152,11 +152,13 @@ export class CliConfig<T extends ConfigMap> {
         if (!this.filePath) {
             throw new Error("path undefined");
         }
-        try {
+        if (fs.existsSync(this.filePath)) {
             this.parseJSONString(fs.readFileSync(this.filePath, 'utf8'));
-        } catch {
+
+        } else {
             this.parseJSONString(null);
         }
+
     }
 
     updateConfig(filePath?: string | null) {

@@ -3,7 +3,8 @@ import { awaitConfirmation, getSeqNo, runWithRetry, waitForDeploy, waitSeqNoChan
 import { type NetworkProvider } from "@ton/blueprint";
 import { randomAddress } from "@ton/test-utils";
 import { TupleBuilder, TupleReader } from "@ton/core";
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 jest.useFakeTimers();
 
 function createNetworkProviderMock() {

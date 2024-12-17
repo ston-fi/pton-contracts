@@ -1,6 +1,7 @@
 import '@ton/test-utils';
 import { onchainMetadata, processPublicKeys, metadataCell, parseMeta, JettonContent, NftContent } from '../src/meta';
-
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return this.toString(); };
 describe('Meta', () => {
 
     const meta = {

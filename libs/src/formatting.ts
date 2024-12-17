@@ -1,6 +1,7 @@
 import { fromNanos } from "./balances";
 import { AccountState, fetchJettonData } from "./onchain-helper";
 import { AsyncReturnType } from "./types";
+import { toRevStr } from "./utils";
 
 export function prettyFees(fee: number | bigint | null | undefined) {
     if (fee === undefined || fee === null) {
@@ -42,4 +43,13 @@ export function prettyState(state: AccountState) {
         colorTag = "<r>"
     }
     return `${colorTag}${state.toUpperCase()}`
+}
+
+export function prettyNumber(src: number | bigint) {
+    // don't add to decimal part
+    let strSrc = src.toString().split(".")
+    let sign = strSrc[0].includes("-") ? "-" : ""
+    strSrc[0] = strSrc[0].replace("-", "")
+    strSrc[0] = toRevStr(toRevStr(strSrc[0]).match(/.{1,3}/g)?.join("_"))
+    return sign + strSrc.join(".")
 }
